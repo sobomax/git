@@ -9,7 +9,7 @@ static void packet_to_pc_item(const char *buffer, int len,
 			      struct parallel_checkout_item *pc_item)
 {
 	const struct pc_item_fixed_portion *fixed_portion;
-	const char *variant;
+	const char *variant, *ident_action;
 	char *encoding;
 
 	if (len < sizeof(struct pc_item_fixed_portion))
@@ -19,7 +19,8 @@ static void packet_to_pc_item(const char *buffer, int len,
 	fixed_portion = (struct pc_item_fixed_portion *)buffer;
 
 	if (len - sizeof(struct pc_item_fixed_portion) !=
-		fixed_portion->name_len + fixed_portion->working_tree_encoding_len)
+		fixed_portion->name_len + fixed_portion->working_tree_encoding_len +
+		fixed_portion->ident_action_len)
 		BUG("checkout worker received corrupted item");
 
 	variant = buffer + sizeof(struct pc_item_fixed_portion);
@@ -37,6 +38,13 @@ static void packet_to_pc_item(const char *buffer, int len,
 	} else {
 		encoding = NULL;
 	}
+	if (fixed_portion->ident_action_len) {
+		ident_action = xmemdupz(variant,
+					fixed_portion->ident_action_len);
+		variant += fixed_portion->ident_action_len;
+	} else {
+		ident_action = NULL;
+	}
 
 	memset(pc_item, 0, sizeof(*pc_item));
 	pc_item->ce = make_empty_transient_cache_entry(fixed_portion->name_len, NULL);
@@ -47,7 +55,8 @@ static void packet_to_pc_item(const char *buffer, int len,
 
 	pc_item->id = fixed_portion->id;
 	pc_item->ca.crlf_action = fixed_portion->crlf_action;
-	pc_item->ca.ident = fixed_portion->ident;
+	pc_item->ca.ident_action.id = ident_action;
+	pc_item->ca.ident_action.id_len = fixed_portion->ident_action_len;
 	pc_item->ca.working_tree_encoding = encoding;
 }
 
