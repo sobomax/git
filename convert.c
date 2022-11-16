@@ -1836,7 +1836,7 @@ static int is_foreign_ident(const struct ident_action *idact, const char *str)
 	    !skip_prefix(str + 1 + idact->id_len, ": ", &str))
 		return 0;
 	for (i = 0; str[i]; i++) {
-		if (isspace(str[i]) && str[i+1] != '$')
+		if (str[i] == '$' && str[i+1] != '\0' && !isspace(str[i-1]))
 			return 1;
 	}
 	return 0;
